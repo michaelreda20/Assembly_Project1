@@ -402,7 +402,7 @@ def instruction_tokenization():
                 elif ins == "SRA":
                     print("func3 = 101, func7 = 0100000")
                     intructions_tokens.append({"Counter": inst["Address"], "word" : "SRA", "operands":[rd,rs2,rs1], "type" :"R"})
-            elif(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SLRI" or ins == "SRAI" ):
+            elif(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
                 test = sp[1].strip()
                 registers = test.split(",",2)
                 rd = registers[0].strip()
@@ -531,7 +531,7 @@ def execute_instructions(starting_address, end_address):
     while(inst_address != end_address):
         instruction = instructions_map[inst_address]
         ins = instruction["word"]
-        if(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SLRI" or ins == "SRAI" ):
+        if(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
             rs1 = instruction["operands"][1]
             imm = instruction["operands"][2]
             rd = instruction["operands"][0]
@@ -570,6 +570,43 @@ def execute_instructions(starting_address, end_address):
                     comp = binary_to_decimal_unsigned(immediate)
                     result = registers[RegNames[rs1]] ^ comp
                     registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
+                    inst_address += 4
+                elif(instruction["word"] == "SLTIU"):
+                    if(abs(registers[RegNames[rs1]]) < abs(int(imm))):
+                        registers[RegNames[rd]] = 1
+                    else:
+                        registers[RegNames[rd]] = 0
+                    inst_address +=4
+                elif(instruction["word"] == "SLTI"):
+                    if (registers[RegNames[rs1]] < int(imm)):
+                        registers[RegNames[rd]] = 1
+                    else:
+                        registers[RegNames[rd]] = 0
+                    inst_address += 4
+                elif(instruction["word"] == "SLLI"):
+                    if(int(imm) >= 32):
+                        print("Shift amount out of range at instruction at address = "+ str(inst_address))
+                    else:
+                        content = signed_integer_to_binary(registers[RegNames[rs1]] <<int(imm))
+                        content = content[len(content)-32:]
+                        registers[RegNames[rd]] = binary_to_decimal(content)
+                    inst_address += 4
+                elif(instruction["word"] == "SRLI"):
+                    if (int(imm) >= 32):
+                        print("Shift amount out of range at instruction at address = " + str(inst_address))
+                    else:
+                        #print(signed_integer_to_binary(registers[RegNames[rs1]]))
+                        content = signed_integer_to_binary(registers[RegNames[rs1]])
+                        res = '0'*int(imm)+ content[0:len(content)-int(imm)]
+                        #print(res)
+                        registers[RegNames[rd]] = binary_to_decimal(res)
+                        #print(signed_integer_to_binary(registers[RegNames[rd]]))
+                    inst_address+= 4
+                elif(instruction["word"] == "SRAI"):
+                    if (int(imm) >= 32):
+                        print("Shift amount out of range at instruction at address = " + str(inst_address))
+                    else:
+                        registers[RegNames[rd]] = registers[RegNames[rs1]] >> int(imm)
                     inst_address += 4
         elif(ins == "LB" or ins == "LH" or ins == "LW" or ins == "LBU" or ins == "LHU" ):
             rs1 = instruction["operands"][2]
@@ -798,6 +835,19 @@ def execute_instructions(starting_address, end_address):
         elif(ins == "ECALL" or ins =="FENCE" or ins == "EBREAK"):
             print("Execution terminated at address "+ str(inst_address))
             return
+        elif(ins == "JAL"):
+            label = instruction["operands"][1].strip()
+            rd = instruction["operands"][0].strip()
+            if(label in Labels_map.keys()):
+                registers[RegNames[rd]] = inst_address + 4
+                inst_address = Labels_map[label]
+
+            elif(int(label) in Labels_map.values()):
+                registers[RegNames[rd]] = inst_address+4
+                inst_address = int(label)
+            else:
+                print("Invalid address at instruction address" + str(inst_address))
+
 if __name__ == '__main__':
     path = "code.txt"
     read_code_file(path)
