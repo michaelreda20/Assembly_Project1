@@ -36,6 +36,8 @@ def signed_integer_to_binary(num: int) -> str:
     else:
         # Convert negative numbers to two's complement binary
         binary = bin((1 << 32) + num)[2:]
+    if(len(binary) < 32):
+        binary = '0'*(32-len(binary)) +binary
 
     return binary
 def read_code_file(path):
@@ -379,7 +381,7 @@ def instruction_tokenization():
                 elif ins == "SLL":
                     print("func3 = 001, func7 = 0000000")
 
-                    intructions_tokens.append({"Counter": inst["Address"], "word" : "ADD", "operands":[rd,rs2,rs1], "type" :"R"})
+                    intructions_tokens.append({"Counter": inst["Address"], "word" : "SLL", "operands":[rd,rs2,rs1], "type" :"R"})
 
                 elif ins == "SLT":
                     print("func3 = 010, func7 = 0000000")
@@ -402,7 +404,7 @@ def instruction_tokenization():
                 elif ins == "SRA":
                     print("func3 = 101, func7 = 0100000")
                     intructions_tokens.append({"Counter": inst["Address"], "word" : "SRA", "operands":[rd,rs2,rs1], "type" :"R"})
-            elif(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
+            elif(ins == "ADDI" or ins == "JALR" or  ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
                 test = sp[1].strip()
                 registers = test.split(",",2)
                 rd = registers[0].strip()
@@ -433,9 +435,9 @@ def instruction_tokenization():
 
                     intructions_tokens.append({"Counter": inst["Address"], "word": "SRLI", "operands": [rd, rs1, immediate], "type": "I"})
                 elif (ins == "SRAI"):
-
-
                     intructions_tokens.append({"Counter": inst["Address"], "word": "SRAI", "operands": [rd, rs1, immediate], "type": "I"})
+                elif(ins == "JALR"):
+                    intructions_tokens.append({"Counter": inst["Address"], "word": "JALR", "operands": [rd, rs1, immediate], "type": "I"})
             elif(ins == "LB" or ins == "LH" or ins == "LW" or ins == "LBU" or ins == "LHU" ):
                 test = sp[1].strip()
                 registers = test.split(",")
@@ -528,325 +530,437 @@ def execute_instructions(starting_address, end_address):
     global memory
     global registers
     inst_address = starting_address
-    while(inst_address != end_address):
-        instruction = instructions_map[inst_address]
-        ins = instruction["word"]
-        if(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
-            rs1 = instruction["operands"][1]
-            imm = instruction["operands"][2]
-            rd = instruction["operands"][0]
-            if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + int(inst_address))
-                return
-            elif (int(imm) >= 2048 or int(imm) < -2048):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if(instruction["word"] == "ADDI"):
-                        result = signed_integer_to_binary( int(registers[RegNames[rs1]]) + int(imm))
-                        result = result[len(result)-32:]
-                        registers[RegNames[rd]] = binary_to_decimal(result)
+    while(inst_address != end_address and inst_address in instructions_map.keys()):
+        try:
+
+            instruction = instructions_map[inst_address]
+            print(instruction)
+            ins = instruction["word"]
+            if(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
+                rs1 = instruction["operands"][1]
+                imm = instruction["operands"][2]
+                rd = instruction["operands"][0]
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + int(inst_address))
+                    return
+                elif (int(imm) >= 2048 or int(imm) < -2048):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    if(instruction["word"] == "ADDI"):
+                            result = signed_integer_to_binary( int(registers[RegNames[rs1]]) + int(imm))
+                            result = result[len(result)-32:]
+                            registers[RegNames[rd]] = binary_to_decimal(result)
+                            inst_address += 4
+                    elif(instruction["word"] =="ANDI"):
+                        temp = signed_integer_to_binary(int(imm))
+                        temp = temp[len(temp)-12:]
+                        immediate = 20*temp[len(temp)-12]+temp
+                        comp = binary_to_decimal_unsigned(immediate)
+                        result = registers[RegNames[rs1]] & comp
+                        registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
                         inst_address += 4
-                elif(instruction["word"] =="ANDI"):
-                    temp = signed_integer_to_binary(int(imm))
-                    temp = temp[len(temp)-12:]
-                    immediate = 20*temp[len(temp)-12]+temp
-                    comp = binary_to_decimal_unsigned(immediate)
-                    result = registers[RegNames[rs1]] & comp
-                    registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
-                    inst_address += 4
-                elif(instruction["word"] == "ORI"):
-                    temp = signed_integer_to_binary(int(imm))
-                    temp = temp[len(temp) - 12:]
-                    immediate = 20 * temp[len(temp) - 12] + temp
-                    comp = binary_to_decimal_unsigned(immediate)
-                    result = registers[RegNames[rs1]] | comp
-                    registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
-                    inst_address += 4
-                elif(instruction["word"] == "XORI"):
-                    temp = signed_integer_to_binary(int(imm))
-                    temp = temp[len(temp) - 12:]
-                    immediate = 20 * temp[len(temp) - 12] + temp
-                    comp = binary_to_decimal_unsigned(immediate)
-                    result = registers[RegNames[rs1]] ^ comp
-                    registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
-                    inst_address += 4
-                elif(instruction["word"] == "SLTIU"):
-                    if(abs(registers[RegNames[rs1]]) < abs(int(imm))):
-                        registers[RegNames[rd]] = 1
-                    else:
-                        registers[RegNames[rd]] = 0
-                    inst_address +=4
-                elif(instruction["word"] == "SLTI"):
-                    if (registers[RegNames[rs1]] < int(imm)):
-                        registers[RegNames[rd]] = 1
-                    else:
-                        registers[RegNames[rd]] = 0
-                    inst_address += 4
-                elif(instruction["word"] == "SLLI"):
-                    if(int(imm) >= 32):
-                        print("Shift amount out of range at instruction at address = "+ str(inst_address))
-                    else:
-                        content = signed_integer_to_binary(registers[RegNames[rs1]] <<int(imm))
-                        content = content[len(content)-32:]
-                        registers[RegNames[rd]] = binary_to_decimal(content)
-                    inst_address += 4
-                elif(instruction["word"] == "SRLI"):
-                    if (int(imm) >= 32):
-                        print("Shift amount out of range at instruction at address = " + str(inst_address))
-                    else:
-                        #print(signed_integer_to_binary(registers[RegNames[rs1]]))
-                        content = signed_integer_to_binary(registers[RegNames[rs1]])
-                        res = '0'*int(imm)+ content[0:len(content)-int(imm)]
-                        #print(res)
-                        registers[RegNames[rd]] = binary_to_decimal(res)
-                        #print(signed_integer_to_binary(registers[RegNames[rd]]))
-                    inst_address+= 4
-                elif(instruction["word"] == "SRAI"):
-                    if (int(imm) >= 32):
-                        print("Shift amount out of range at instruction at address = " + str(inst_address))
-                    else:
-                        registers[RegNames[rd]] = registers[RegNames[rs1]] >> int(imm)
-                    inst_address += 4
-        elif(ins == "LB" or ins == "LH" or ins == "LW" or ins == "LBU" or ins == "LHU" ):
-            rs1 = instruction["operands"][2]
-            imm = instruction["operands"][1]
-            rd = instruction["operands"][0]
-            if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + int(inst_address))
-                return
-            elif (int(imm) >= 2048 or int(imm) < -2048):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if(instruction["word"] == "LW"):
-                    content = ""
-                    addr = int(registers[RegNames[rs1]]) + int(imm)
+                    elif(instruction["word"] == "ORI"):
+                        temp = signed_integer_to_binary(int(imm))
+                        temp = temp[len(temp) - 12:]
+                        immediate = 20 * temp[len(temp) - 12] + temp
+                        comp = binary_to_decimal_unsigned(immediate)
+                        result = registers[RegNames[rs1]] | comp
+                        registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
+                        inst_address += 4
+                    elif(instruction["word"] == "XORI"):
+                        temp = signed_integer_to_binary(int(imm))
+                        temp = temp[len(temp) - 12:]
+                        immediate = 20 * temp[len(temp) - 12] + temp
+                        comp = binary_to_decimal_unsigned(immediate)
+                        result = registers[RegNames[rs1]] ^ comp
+                        registers[RegNames[rd]] = binary_to_decimal(signed_integer_to_binary(result))
+                        inst_address += 4
+                    elif(instruction["word"] == "SLTIU"):
+                        if(abs(registers[RegNames[rs1]]) < abs(int(imm))):
+                            registers[RegNames[rd]] = 1
+                        else:
+                            registers[RegNames[rd]] = 0
+                        inst_address +=4
+                    elif(instruction["word"] == "SLTI"):
+                        if (registers[RegNames[rs1]] < int(imm)):
+                            registers[RegNames[rd]] = 1
+                        else:
+                            registers[RegNames[rd]] = 0
+                        inst_address += 4
+                    elif(instruction["word"] == "SLLI"):
+                        if(int(imm) >= 32):
+                            print("Shift amount out of range at instruction at address = "+ str(inst_address))
+                        else:
+                            content = signed_integer_to_binary(registers[RegNames[rs1]] <<int(imm))
+                            content = content[len(content)-32:]
+                            registers[RegNames[rd]] = binary_to_decimal(content)
+                        inst_address += 4
+                    elif(instruction["word"] == "SRLI"):
+                        if (int(imm) >= 32):
+                            print("Shift amount out of range at instruction at address = " + str(inst_address))
+                        else:
+                            #print(signed_integer_to_binary(registers[RegNames[rs1]]))
+                            content = signed_integer_to_binary(registers[RegNames[rs1]])
+                            res = '0'*int(imm)+ content[0:len(content)-int(imm)]
+                            #print(res)
+                            registers[RegNames[rd]] = binary_to_decimal(res)
+                            #print(signed_integer_to_binary(registers[RegNames[rd]]))
+                        inst_address+= 4
+                    elif(instruction["word"] == "SRAI"):
+                        if (int(imm) >= 32):
+                            print("Shift amount out of range at instruction at address = " + str(inst_address))
+                        else:
+                            registers[RegNames[rd]] = registers[RegNames[rs1]] >> int(imm)
+                        inst_address += 4
+            elif(ins == "LB" or ins == "LH" or ins == "LW" or ins == "LBU" or ins == "LHU" ):
+                rs1 = instruction["operands"][2]
+                imm = instruction["operands"][1]
+                rd = instruction["operands"][0]
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + int(inst_address))
+                    return
+                elif (int(imm) >= 2048 or int(imm) < -2048):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    if(instruction["word"] == "LW"):
+                        content = ""
+                        addr = int(registers[RegNames[rs1]]) + int(imm)
+                        validate_memory(addr)
+                        validate_memory(addr+1)
+                        validate_memory(addr+2)
+                        validate_memory(addr+3)
+                        content = memory[addr+3] + memory[addr+2] + memory[addr+1] + memory[addr]
+                        result = binary_to_decimal(content)
+                        #print(content)
+                        #print(result)
+                        #print(rd)
+                        registers[RegNames[rd]] = result
+                        inst_address +=4
+                    elif(instruction["word"] == "LHU"):
+                        content = ""
+                        addr = int(registers[RegNames[rs1]]) + int(imm)
+                        validate_memory(addr)
+                        validate_memory(addr + 1)
+                        content = "0"*16 + memory[addr + 1] + memory[addr]
+                        result = binary_to_decimal(content)
+                        registers[RegNames[rd]] = result
+                        inst_address += 4
+                    elif(instruction["word"] == "LBU"):
+                        content = ""
+                        addr = int(registers[RegNames[rs1]]) + int(imm)
+                        validate_memory(addr)
+                        content = "0" * 24 + memory[addr]
+                        result = binary_to_decimal(content)
+                        registers[RegNames[rd]] = result
+                        inst_address += 4
+                    elif(instruction["word"] == "LH"):
+                        content = ""
+                        addr = int(registers[RegNames[rs1]]) + int(imm)
+                        validate_memory(addr)
+                        validate_memory(addr + 1)
+                        content = memory[addr+1][0] * 16 + memory[addr + 1] + memory[addr]
+                        result = binary_to_decimal(content)
+                        registers[RegNames[rd]] = result
+                        inst_address += 4
+                    elif(instruction["word"] == "LB"):
+                        content = ""
+                        addr = int(registers[RegNames[rs1]]) + int(imm)
+                        validate_memory(addr)
+                        content = memory[addr][0] * 24 + memory[addr]
+                        result = binary_to_decimal(content)
+                        registers[RegNames[rd]] = result
+                        inst_address += 4
+            elif(instruction["word"] == "SW"):
+                rs1 = instruction["operands"][2].strip()
+                imm = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                imm_bin = signed_integer_to_binary(int(imm))
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif(int(imm) >= 2048 or int(imm) < -2048 ):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    content = signed_integer_to_binary(int(registers[RegNames[rd]]))
+                    if(len(content) > 32):
+                        content = content[len(content)-32:len(content)]
+                    addr = int(registers[RegNames[rs1]])+ int(imm)
                     validate_memory(addr)
                     validate_memory(addr+1)
                     validate_memory(addr+2)
                     validate_memory(addr+3)
-                    content = memory[addr+3] + memory[addr+2] + memory[addr+1] + memory[addr]
-                    result = binary_to_decimal(content)
-                    #print(content)
-                    #print(result)
-                    #print(rd)
-                    registers[RegNames[rd]] = result
-                    inst_address +=4
-                elif(instruction["word"] == "LHU"):
-                    content = ""
+                    memory[addr] = content[24:32]
+                    memory[addr + 1] = content[16:24]
+                    memory[addr + 2] = content[8:16]
+                    memory[addr + 3] = content[0:8]
+                inst_address += 4
+            elif (instruction["word"] == "SH"):
+                rs1 = instruction["operands"][2].strip()
+                imm = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                # print(int(imm))
+                # print(bin(int(imm)))
+                imm_bin = signed_integer_to_binary(int(imm))
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (int(imm) >= 2048 or int(imm) < -2048):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    content = signed_integer_to_binary(int(registers[RegNames[rd]]))
+                    # print(rd)
+                    # print(content)
+                    # print(len(content))
+                    if (len(content) > 32):
+                        content = content[len(content) - 32:len(content)]
                     addr = int(registers[RegNames[rs1]]) + int(imm)
                     validate_memory(addr)
                     validate_memory(addr + 1)
-                    content = "0"*16 + memory[addr + 1] + memory[addr]
-                    result = binary_to_decimal(content)
-                    registers[RegNames[rd]] = result
-                    inst_address += 4
-                elif(instruction["word"] == "LBU"):
-                    content = ""
+                    memory[addr] = content[24:32]
+                    memory[addr + 1] = content[16:24]
+                inst_address += 4
+            elif (instruction["word"] == "SB"):
+                rs1 = instruction["operands"][2].strip()
+                imm = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                # print(int(imm))
+                # print(bin(int(imm)))
+                imm_bin = signed_integer_to_binary(int(imm))
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (int(imm) >= 2048 or int(imm) < -2048):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    content = signed_integer_to_binary(int(registers[RegNames[rd]]))
+                    # print(rd)
+                    # print(content)
+                    # print(len(content))
+                    if (len(content) > 32):
+                        content = content[len(content) - 32:len(content)]
                     addr = int(registers[RegNames[rs1]]) + int(imm)
                     validate_memory(addr)
-                    content = "0" * 24 + memory[addr]
-                    result = binary_to_decimal(content)
-                    registers[RegNames[rd]] = result
-                    inst_address += 4
-                elif(instruction["word"] == "LH"):
-                    content = ""
-                    addr = int(registers[RegNames[rs1]]) + int(imm)
-                    validate_memory(addr)
-                    validate_memory(addr + 1)
-                    content = memory[addr+1][0] * 16 + memory[addr + 1] + memory[addr]
-                    result = binary_to_decimal(content)
-                    registers[RegNames[rd]] = result
-                    inst_address += 4
-                elif(instruction["word"] == "LB"):
-                    content = ""
-                    addr = int(registers[RegNames[rs1]]) + int(imm)
-                    validate_memory(addr)
-                    content = memory[addr][0] * 24 + memory[addr]
-                    result = binary_to_decimal(content)
-                    registers[RegNames[rd]] = result
-                    inst_address += 4
-        elif(instruction["word"] == "SW"):
-            rs1 = instruction["operands"][2].strip()
-            imm = instruction["operands"][1].strip()
-            rd = instruction["operands"][0].strip()
-            imm_bin = signed_integer_to_binary(int(imm))
-            if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif(int(imm) >= 2048 or int(imm) < -2048 ):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                content = signed_integer_to_binary(int(registers[RegNames[rd]]))
-                if(len(content) > 32):
-                    content = content[len(content)-32:len(content)]
-                addr = int(registers[RegNames[rs1]])+ int(imm)
-                validate_memory(addr)
-                validate_memory(addr+1)
-                validate_memory(addr+2)
-                validate_memory(addr+3)
-                memory[addr] = content[24:32]
-                memory[addr + 1] = content[16:24]
-                memory[addr + 2] = content[8:16]
-                memory[addr + 3] = content[0:8]
-            inst_address += 4
-        elif (instruction["word"] == "SH"):
-            rs1 = instruction["operands"][2].strip()
-            imm = instruction["operands"][1].strip()
-            rd = instruction["operands"][0].strip()
-            # print(int(imm))
-            # print(bin(int(imm)))
-            imm_bin = signed_integer_to_binary(int(imm))
-            if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (int(imm) >= 2048 or int(imm) < -2048):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                content = signed_integer_to_binary(int(registers[RegNames[rd]]))
-                # print(rd)
-                # print(content)
-                # print(len(content))
-                if (len(content) > 32):
-                    content = content[len(content) - 32:len(content)]
-                addr = int(registers[RegNames[rs1]]) + int(imm)
-                validate_memory(addr)
-                validate_memory(addr + 1)
-                memory[addr] = content[24:32]
-                memory[addr + 1] = content[16:24]
-            inst_address += 4
-        elif (instruction["word"] == "SB"):
-            rs1 = instruction["operands"][2].strip()
-            imm = instruction["operands"][1].strip()
-            rd = instruction["operands"][0].strip()
-            # print(int(imm))
-            # print(bin(int(imm)))
-            imm_bin = signed_integer_to_binary(int(imm))
-            if (rs1 not in RegNames.keys() or rd not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (int(imm) >= 2048 or int(imm) < -2048):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                content = signed_integer_to_binary(int(registers[RegNames[rd]]))
-                # print(rd)
-                # print(content)
-                # print(len(content))
-                if (len(content) > 32):
-                    content = content[len(content) - 32:len(content)]
-                addr = int(registers[RegNames[rs1]]) + int(imm)
-                validate_memory(addr)
-                memory[addr] = content[24:32]
-            inst_address += 4
-        elif (ins == "BEQ"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if(registers[RegNames[rs1]] == registers[RegNames[rs2]]):
-                    inst_address = Labels_map[label]
+                    memory[addr] = content[24:32]
+                inst_address += 4
+            elif (ins == "BEQ"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "BNE"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if (registers[RegNames[rs1]] != registers[RegNames[rs2]]):
-                    inst_address = Labels_map[label]
+                    if(registers[RegNames[rs1]] == registers[RegNames[rs2]]):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "BNE"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "BLT"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if (registers[RegNames[rs1]] < registers[RegNames[rs2]]):
-                    inst_address = Labels_map[label]
+                    if (registers[RegNames[rs1]] != registers[RegNames[rs2]]):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "BLT"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "BGE"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if (registers[RegNames[rs1]] >= registers[RegNames[rs2]]):
-                    inst_address = Labels_map[label]
+                    if (registers[RegNames[rs1]] < registers[RegNames[rs2]]):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "BGE"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "BGEU"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if (abs(registers[RegNames[rs1]]) >= abs(registers[RegNames[rs2]])):
-                    inst_address = Labels_map[label]
+                    if (registers[RegNames[rs1]] >= registers[RegNames[rs2]]):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "BGEU"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "BLTU"):
-            rs1 = instruction["operands"][0].strip()
-            rs2 = instruction["operands"][1].strip()
-            label = instruction["operands"][2].strip()
-            if (rs1 not in RegNames.keys() or rs1 not in RegNames.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            elif (label not in Labels_map.keys()):
-                print("Invalid Instruction Format at address " + str(inst_address))
-                return
-            else:
-                if (abs(registers[RegNames[rs1]]) < abs(registers[RegNames[rs2]])):
-                    inst_address = Labels_map[label]
+                    if (abs(registers[RegNames[rs1]]) >= abs(registers[RegNames[rs2]])):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "BLTU"):
+                rs1 = instruction["operands"][0].strip()
+                rs2 = instruction["operands"][1].strip()
+                label = instruction["operands"][2].strip()
+                if (rs1 not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (label not in Labels_map.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
                 else:
-                    inst_address += 4
-        elif(ins == "ECALL" or ins =="FENCE" or ins == "EBREAK"):
-            print("Execution terminated at address "+ str(inst_address))
-            return
-        elif(ins == "JAL"):
-            label = instruction["operands"][1].strip()
-            rd = instruction["operands"][0].strip()
-            if(label in Labels_map.keys()):
-                registers[RegNames[rd]] = inst_address + 4
-                inst_address = Labels_map[label]
+                    if (abs(registers[RegNames[rs1]]) < abs(registers[RegNames[rs2]])):
+                        inst_address = Labels_map[label]
+                    else:
+                        inst_address += 4
+            elif(ins == "ECALL" or ins =="FENCE" or ins == "EBREAK"):
+                print("Execution terminated at address "+ str(inst_address))
+                return
+            elif(ins == "JAL"):
+                label = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                if(label in Labels_map.keys()):
+                    registers[RegNames[rd]] = inst_address + 4
+                    inst_address = Labels_map[label]
 
-            elif(int(label) in Labels_map.values()):
-                registers[RegNames[rd]] = inst_address+4
-                inst_address = int(label)
-            else:
-                print("Invalid address at instruction address" + str(inst_address))
+                elif(int(label) in Labels_map.values()):
+                    registers[RegNames[rd]] = inst_address+4
+                    inst_address = int(label)
+                else:
+                    print("Invalid address at instruction address" + str(inst_address))
+            elif(ins == "JALR"):
+                #print("here")
+                imm = instruction["operands"][2].strip()
+                rs = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                #print("here2")
+                if (rs not in RegNames.keys() or rd not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                elif (int(imm) >= 2048 or int(imm) < -2048):
+                    print("Invalid Instruction Format at address " + str(inst_address))
+                    return
+                else:
+                    registers[RegNames[rd]] = inst_address + 4
+                    #print(imm)
+                    inst_address = registers[RegNames[rs]] + int(imm)
+                    #print(inst_address)
+            elif (ins == "ADD" or ins == "OR" or ins == "AND" or ins == "SUB" or ins == "SLL" or ins == "SLT" or ins == "SLTU" or ins == "XOR" or ins == "SRL" or ins == "SRA"):
+                rs1 = instruction["operands"][1].strip()
+                rs2 = instruction["operands"][2].strip()
+                rd = instruction["operands"][0].strip()
+                if (rs1 not in RegNames.keys() or rd not in RegNames.keys() or rs2 not in RegNames.keys()):
+                    print("Invalid Instruction Format at address " + int(inst_address))
+                    return
+                else:
+                    if(ins == "ADD"):
+                        res =registers[RegNames[rs1]]+registers[RegNames[rs2]]
+                        temp = signed_integer_to_binary(res)
+                        registers[RegNames[rd]] = binary_to_decimal(temp[len(temp)-32:])
+                        inst_address += 4
+                    elif(ins == "SUB"):
+                        res = registers[RegNames[rs1]] - registers[RegNames[rs2]]
+                        print(res)
+                        temp = signed_integer_to_binary(res)
+                        print(len(temp))
+                        registers[RegNames[rd]] = binary_to_decimal(temp[len(temp) - 32:])
+                        inst_address += 4
+                    elif(ins == "OR"):
+                        registers[RegNames[rd]] = registers[RegNames[rs1]] | registers[RegNames[rs2]]
+                        inst_address += 4
+                    elif(ins == "XOR"):
+                        registers[RegNames[rd]] = registers[RegNames[rs1]] ^ registers[RegNames[rs2]]
+                        inst_address += 4
+                    elif(ins == "AND"):
+                        registers[RegNames[rd]] = registers[RegNames[rs1]] & registers[RegNames[rs2]]
+                        inst_address += 4
+                    elif(ins == "SLT"):
+                        if(registers[RegNames[rs1]] < registers[RegNames[rs2]]):
+                            registers[RegNames[rd]] = 1
+                        else:
+                            registers[RegNames[rd]] = 0
+                        inst_address+=4
+                    elif(ins == "SLTU"):
+                        #print(abs(registers[RegNames[rs1]]))
+                        #print(abs(registers[RegNames[rs2]]))
+                        if (abs(registers[RegNames[rs1]]) < abs(registers[RegNames[rs2]])):
+
+                            registers[RegNames[rd]] = 1
+                        else:
+                            registers[RegNames[rd]] = 0
+                        inst_address += 4
+                    elif(ins == "SLL"):
+                        temp = signed_integer_to_binary(registers[RegNames[rs2]])
+                        shamt = temp[len(temp)-5:]
+                        shamt = binary_to_decimal(shamt)
+                        content = registers[RegNames[rs1]] << shamt
+                        content = signed_integer_to_binary(content)
+                        content = content[len(content)-32:]
+                        registers[RegNames[rd]] = binary_to_decimal(content)
+                        inst_address+= 4
+                    elif(ins == "SRA"):
+                        temp = signed_integer_to_binary(registers[RegNames[rs2]])
+                        shamt = temp[len(temp) - 5:]
+                        shamt = binary_to_decimal(shamt)
+                        content = registers[RegNames[rs1]] >> shamt
+                        content = signed_integer_to_binary(content)
+                        content = content[len(content) - 32:]
+                        registers[RegNames[rd]] = binary_to_decimal(content)
+                        inst_address += 4
+                    elif(ins == "SRL"):
+                        temp = signed_integer_to_binary(registers[RegNames[rs2]])
+                        shamt = temp[len(temp) - 5:]
+                        #print(type(shamt))
+                        shamt = binary_to_decimal(shamt)
+                        content = signed_integer_to_binary(registers[RegNames[rs1]])
+                        #print(shamt)
+                        res = '0' * shamt + content[0:len(content) - shamt]
+                        #print(content)
+                        registers[RegNames[rd]] = binary_to_decimal(res)
+                        inst_address+=4
+            elif(ins == "LUI"):
+                imm = instruction["operands"][1].strip()
+                rd= instruction["operands"][0].strip()
+                if(rd not in RegNames.keys() or int(imm) > 524287  or int(imm) < -524288):
+                    print("Error in instruction at address = "+str(inst_address))
+                    return
+                else:
+                    content = signed_integer_to_binary(int(imm))
+                    content = content[12:32] + '0'*12
+                    print(content)
+                    registers[RegNames[rd]] = binary_to_decimal(content)
+                    inst_address += 4
+            registers[RegNames["x0"]] = 0
+            print(registers)
+            print(memory)
+
+        except:
+            print("Error in instruction at address = "+ str(inst_address))
+            return
 
 if __name__ == '__main__':
     path = "code.txt"
@@ -858,7 +972,9 @@ if __name__ == '__main__':
     finalize_instructions_and_labels()
     print(instructions_map)
     print(Labels_map)
+
     initialize_registers()
+    registers[RegNames["sp"]] = 40000
     read_and_initialize_memory("data.txt")
     print(memory)
     starting_address = int(input("Enter the starting address of the program: "))
