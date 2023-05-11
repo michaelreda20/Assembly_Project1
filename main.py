@@ -474,6 +474,69 @@ def finalize_instructions_and_labels():
         instructions_map[inst["Counter"]] = inst
     for label in Labels:
         Labels_map[label["Name"]] = label["Address"]
+def int_to_hex(num):
+    # Convert the number to 32-bit two's complement representation
+    if num < 0:
+        num = (1 << 32) + num
+    # Convert the number to hexadecimal string
+    hex_str = hex(num)[2:]
+    # Pad the string with leading zeroes if necessary
+    hex_str = hex_str.zfill(8)
+    # Add "0x" before the hexadecimal string
+    hex_str = "0x" + hex_str
+    # Return the hexadecimal string
+    return hex_str
+def Display_registers():
+    print("     Registers       ")
+    print("Register name                binary value      decimal value    hexadecimal value")
+    print("zero               " +signed_integer_to_binary(registers[RegNames["zero"]]) +"  " + str(registers[RegNames["zero"]]) +"  " + int_to_hex(registers[RegNames["zero"]]))
+    print("ra               " +signed_integer_to_binary(registers[RegNames["ra"]]) +"  " + str(registers[RegNames["ra"]]) +"  " + int_to_hex(registers[RegNames["ra"]])           )
+    print("sp               " +signed_integer_to_binary(registers[RegNames["sp"]]) +"  " + str(registers[RegNames["sp"]]) +"  " + int_to_hex(registers[RegNames["sp"]])           )
+    print("gp               " +signed_integer_to_binary(registers[RegNames["gp"]]) +"  " + str(registers[RegNames["gp"]]) +"  " + int_to_hex(registers[RegNames["gp"]])           )
+    print("tp               " +signed_integer_to_binary(registers[RegNames["tp"]]) +"  " + str(registers[RegNames["tp"]]) +"  " + int_to_hex(registers[RegNames["tp"]])           )
+    print("t0               " +signed_integer_to_binary(registers[RegNames["t0"]]) +"  " + str(registers[RegNames["t0"]]) +"  " + int_to_hex(registers[RegNames["t0"]])           )
+    print("t1               " +signed_integer_to_binary(registers[RegNames["t1"]]) +"  " + str(registers[RegNames["t1"]]) +"  " + int_to_hex(registers[RegNames["t1"]])           )
+    print("t2               " +signed_integer_to_binary(registers[RegNames["t2"]]) +"  " + str(registers[RegNames["t2"]]) +"  " + int_to_hex(registers[RegNames["t2"]])           )
+    print("s0               " +signed_integer_to_binary(registers[RegNames["s0"]]) +"  " + str(registers[RegNames["s0"]]) +"  " + int_to_hex(registers[RegNames["s0"]])           )
+    print("s1               " +signed_integer_to_binary(registers[RegNames["s1"]]) +"  " + str(registers[RegNames["s1"]]) +"  " + int_to_hex(registers[RegNames["s1"]])           )
+    print("a0               " +signed_integer_to_binary(registers[RegNames["a0"]]) +"  " + str(registers[RegNames["a0"]]) +"  " + int_to_hex(registers[RegNames["a0"]])           )
+    print("a1               " +signed_integer_to_binary(registers[RegNames["a1"]]) +"  " + str(registers[RegNames["a1"]]) +"  " + int_to_hex(registers[RegNames["a1"]])           )
+    print("a2               " +signed_integer_to_binary(registers[RegNames["a2"]]) +"  " + str(registers[RegNames["a2"]]) +"  " + int_to_hex(registers[RegNames["a2"]])           )
+    print("a3               " +signed_integer_to_binary(registers[RegNames["a3"]]) +"  " + str(registers[RegNames["a3"]]) +"  " + int_to_hex(registers[RegNames["a3"]])           )
+    print("a4               " +signed_integer_to_binary(registers[RegNames["a4"]]) +"  " + str(registers[RegNames["a4"]]) +"  " + int_to_hex(registers[RegNames["a4"]])           )
+    print("a5               " +signed_integer_to_binary(registers[RegNames["a5"]]) +"  " + str(registers[RegNames["a5"]]) +"  " + int_to_hex(registers[RegNames["a5"]])           )
+    print("a6               " +signed_integer_to_binary(registers[RegNames["a6"]]) +"  " + str(registers[RegNames["a6"]]) +"  " + int_to_hex(registers[RegNames["a6"]])           )
+    print("a7               " +signed_integer_to_binary(registers[RegNames["a7"]]) +"  " + str(registers[RegNames["a7"]]) +"  " + int_to_hex(registers[RegNames["a7"]])           )
+    print("s2               " +signed_integer_to_binary(registers[RegNames["s2"]]) +"  " + str(registers[RegNames["s2"]]) +"  " + int_to_hex(registers[RegNames["s2"]])           )
+    print("s3               " +signed_integer_to_binary(registers[RegNames["s3"]]) +"  " + str(registers[RegNames["s3"]]) +"  " + int_to_hex(registers[RegNames["s3"]])           )
+    print("s4               " +signed_integer_to_binary(registers[RegNames["s4"]]) +"  " + str(registers[RegNames["s4"]]) +"  " + int_to_hex(registers[RegNames["s4"]])           )
+    print("s5               " +signed_integer_to_binary(registers[RegNames["s5"]]) +"  " + str(registers[RegNames["s5"]]) +"  " + int_to_hex(registers[RegNames["s5"]])           )
+    print("s6               " +signed_integer_to_binary(registers[RegNames["s6"]]) +"  " + str(registers[RegNames["s6"]]) +"  " + int_to_hex(registers[RegNames["s6"]])           )
+    print("s7               " +signed_integer_to_binary(registers[RegNames["s7"]]) +"  " + str(registers[RegNames["s7"]]) +"  " + int_to_hex(registers[RegNames["s7"]])           )
+    print("s8               " +signed_integer_to_binary(registers[RegNames["s8"]]) +"  " + str(registers[RegNames["s8"]]) +"  " + int_to_hex(registers[RegNames["s8"]])           )
+    print("s9               " +signed_integer_to_binary(registers[RegNames["s9"]]) +"  " + str(registers[RegNames["s9"]]) +"  " + int_to_hex(registers[RegNames["s9"]])           )
+    print("s10               " +signed_integer_to_binary(registers[RegNames["s10"]]) +"  " + str(registers[RegNames["s10"]]) +"  " + int_to_hex(registers[RegNames["s10"]])           )
+    print("s11               " +signed_integer_to_binary(registers[RegNames["s11"]]) +"  " + str(registers[RegNames["s11"]]) +"  " + int_to_hex(registers[RegNames["s11"]])           )
+    print("t3               " +signed_integer_to_binary(registers[RegNames["t3"]]) +"  " + str(registers[RegNames["t3"]]) +"  " + int_to_hex(registers[RegNames["t3"]])           )
+    print("t4               " +signed_integer_to_binary(registers[RegNames["t4"]]) +"  " + str(registers[RegNames["t4"]]) +"  " + int_to_hex(registers[RegNames["t4"]])           )
+    print("t5               " +signed_integer_to_binary(registers[RegNames["t5"]]) +"  " + str(registers[RegNames["t5"]]) +"  " + int_to_hex(registers[RegNames["t5"]])           )
+    print("t6               " +signed_integer_to_binary(registers[RegNames["t6"]]) +"  " + str(registers[RegNames["t6"]]) +"  " + int_to_hex(registers[RegNames["t6"]])           )
+def Display_memory():
+    keys = memory.keys()
+    keys = list(keys)
+    keys.sort()
+    print("Memory")
+    print("Memory Location                binary value      decimal value    hexadecimal value")
+    for key in keys:
+        if(key % 4== 0):
+            validate_memory(key)
+            validate_memory(key+1)
+            validate_memory(key+2)
+            validate_memory(key+3)
+            bin_content = memory[key+3] + memory[key+2]+ memory[key+1] + memory[key]
+            int_rep = binary_to_decimal(bin_content)
+            print(str(key) + "       " + bin_content+ "    "+ str(int_rep)+  "    "+ int_to_hex(int_rep))
+
 def initialize_registers():
     global registers
     for i in range(0,32):
@@ -534,7 +597,7 @@ def execute_instructions(starting_address, end_address):
         try:
 
             instruction = instructions_map[inst_address]
-            print(instruction)
+            print("instruction: "+ instruction["word"] +" " + str(instruction["operands"]))
             ins = instruction["word"]
             if(ins == "ADDI" or ins == "SLTI" or ins == "SLTIU" or ins == "XORI" or ins == "ORI" or ins == "ANDI" or ins == "SLLI" or ins == "SRLI" or ins == "SRAI" ):
                 rs1 = instruction["operands"][1]
@@ -954,10 +1017,22 @@ def execute_instructions(starting_address, end_address):
                     print(content)
                     registers[RegNames[rd]] = binary_to_decimal(content)
                     inst_address += 4
+            elif (ins == "AUIPC"):
+                # print("here")
+                imm = instruction["operands"][1].strip()
+                rd = instruction["operands"][0].strip()
+                if (rd not in RegNames.keys() or int(imm) > 524287 or int(imm) < -524288):
+                    print("Error in instruction at address = " + str(inst_address))
+                    return
+                else:
+                    content = signed_integer_to_binary(int(imm))
+                    content = content[12:32] + '0' * 12
+                    # print(content)
+                    registers[RegNames[rd]] = binary_to_decimal(content) + inst_address
+                    inst_address += 4
             registers[RegNames["x0"]] = 0
-            print(registers)
-            print(memory)
-
+            Display_registers()
+            Display_memory()
         except:
             print("Error in instruction at address = "+ str(inst_address))
             return
@@ -974,15 +1049,15 @@ if __name__ == '__main__':
     print(Labels_map)
 
     initialize_registers()
-    registers[RegNames["sp"]] = 40000
+    registers[RegNames["sp"]] = 40000000
     read_and_initialize_memory("data.txt")
-    print(memory)
+    #print(memory)
     starting_address = int(input("Enter the starting address of the program: "))
     addresses = list(instructions_map.keys())
     end_address = addresses[len(addresses)-1]+4
     #print(RegNames)
     #registers["x8"]= 485623644513
     execute_instructions(starting_address, end_address)
-    print(registers)
-    print(memory)
+    #print(registers)
+    #print(memory)
 
